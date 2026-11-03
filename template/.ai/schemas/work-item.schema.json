@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Work item manifest (docs/work/<ID>/work-item.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "title", "status", "route", "dependencies", "base_commit", "owned_paths",
+    "acceptance_criteria", "stages", "artifacts", "open_decisions", "created", "updated"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Z]{2,5}-[0-9]{3,}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["backlog", "ready", "in_progress", "blocked", "done", "cancelled"] },
+    "route": { "enum": ["simple", "standard", "high-risk"] },
+    "dependencies": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2,5}-[0-9]{3,}$" } },
+    "base_commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$" },
+    "owned_paths": { "type": "array", "items": { "type": "string" } },
+    "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "role", "status", "artifact"],
+        "properties": {
+          "name": { "enum": ["simple", "research", "plan", "implement", "review", "audit"] },
+          "role": { "enum": ["code-simple", "code-researcher", "code-planner", "code-implementer", "code-reviewer", "auditor"] },
+          "status": { "enum": ["pending", "in_progress", "done", "skipped"] },
+          "artifact": { "type": ["string", "null"], "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["uuid", "kind", "path", "status", "supersedes", "sha256"],
+        "properties": {
+          "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "kind": { "enum": ["frp", "research", "plan", "implementation", "review", "audit", "decision", "handoff"] },
+          "path": { "type": "string", "description": "Relative to the work item folder, forward slashes." },
+          "status": { "enum": ["draft", "accepted", "superseded", "rejected"] },
+          "supersedes": { "type": ["string", "null"] },
+          "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "open_decisions": { "type": "array", "items": { "type": "string" } },
+    "route_history": {
+      "type": "array",
+      "description": "Optional. One entry appended by update-work-item.mjs --route on each real route change (append only).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "at"],
+        "properties": {
+          "from": { "enum": ["simple", "standard", "high-risk"] },
+          "to": { "enum": ["simple", "standard", "high-risk"] },
+          "at": { "type": "string" }
+        }
+      }
+    },
+    "created": { "type": "string" },
+    "updated": { "type": "string" }
+  }
+}

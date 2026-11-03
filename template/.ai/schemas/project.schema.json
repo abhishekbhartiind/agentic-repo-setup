@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project config",
+  "type": "object",
+  "required": [
+    "identity",
+    "instructions",
+    "commands",
+    "policy",
+    "storage",
+    "work_ids",
+    "authors",
+    "agents"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "name",
+        "platform",
+        "language",
+        "router",
+        "package_manager"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "router": {
+          "type": "string"
+        },
+        "package_manager": {
+          "type": "string"
+        }
+      }
+    },
+    "instructions": {
+      "type": "object",
+      "required": [
+        "project_context",
+        "prp"
+      ],
+      "properties": {
+        "project_context": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prp": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path of the PRP (Product Requirements Prompt), relative to the repo root."
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "run"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "run": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "protected_paths",
+        "sensitive_environment_variables"
+      ],
+      "properties": {
+        "protected_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "sensitive_environment_variables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "required": [
+        "secrets"
+      ],
+      "properties": {
+        "secrets": {
+          "type": "string"
+        }
+      }
+    },
+    "work_ids": {
+      "type": "object",
+      "required": [
+        "prefixes"
+      ],
+      "properties": {
+        "prefixes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "prefix",
+              "meaning"
+            ],
+            "properties": {
+              "prefix": {
+                "type": "string",
+                "pattern": "^[A-Z]{2,5}$"
+              },
+              "meaning": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "authors": {
+      "type": "object",
+      "required": [
+        "allowed_vendors"
+      ],
+      "properties": {
+        "allowed_vendors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "description": "Repo-specific wording for the generated .claude/agents profiles.",
+      "required": [
+        "docs_rule",
+        "unverified"
+      ],
+      "properties": {
+        "docs_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unverified": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
