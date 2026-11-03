@@ -38,23 +38,53 @@ function readJsonIfAny(path) {
   }
 }
 
+function readIfAny(path) {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function detectPython(repo, has) {
+  const hasPy = has('pyproject.toml') || has('requirements.txt') || has('setup.py') || has('setup.cfg');
+  if (!hasPy) return null;
+  const text = `${readIfAny(join(repo, 'pyproject.toml'))}\n${readIfAny(join(repo, 'requirements.txt'))}\n${readIfAny(join(repo, 'requirements-dev.txt'))}`;
+  const hasTool = (name) => new RegExp(`\\[tool\\.${name}(\\.|\\])|(^|["'\\s])${name}(\\[|[\\s"'=<>!~,]|$)`, 'im').test(text);
+  const pm = has('uv.lock') ? 'uv' : has('poetry.lock') ? 'poetry' : has('Pipfile.lock') ? 'pipenv' : 'pip';
+  const run = (cmd) => (pm === 'pip' ? cmd : `${pm} run ${cmd}`);
+  const frameworks = [['django', 'Django'], ['fastapi', 'FastAPI'], ['flask', 'Flask']].filter(([d]) => hasTool(d)).map(([, n]) => n);
+  return {
+    pm,
+    frameworks,
+    commands: {
+      typecheck: hasTool('mypy') ? run('mypy .') : hasTool('pyright') ? run('pyright') : '',
+      lint: hasTool('ruff') ? run('ruff check .') : hasTool('flake8') ? run('flake8') : '',
+      'format-check': hasTool('ruff') ? run('ruff format --check .') : hasTool('black') ? run('black --check .') : '',
+      test: hasTool('pytest') || has('tests') || has('test') ? run('pytest') : '',
+      build: pm === 'uv' ? 'uv build' : pm === 'poetry' ? 'poetry build' : /\[build-system\]/.test(text) ? 'python -m build' : '',
+    },
+  };
+}
+
 function detect(repo) {
   const pkg = readJsonIfAny(join(repo, 'package.json')) ?? {};
   const scripts = pkg.scripts ?? {};
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const has = (f) => existsSync(join(repo, f));
-  const pm = has('pnpm-lock.yaml') ? 'pnpm' : has('yarn.lock') ? 'yarn' : has('bun.lock') || has('bun.lockb') ? 'bun' : 'npm';
+  const python = detectPython(repo, has);
+  const pm = has('pnpm-lock.yaml') ? 'pnpm' : has('yarn.lock') ? 'yarn' : has('bun.lock') || has('bun.lockb') ? 'bun' : has('package.json') ? 'npm' : python ? python.pm : 'npm';
   const stackNames = [
     ['next', 'Next.js'], ['@nestjs/core', 'NestJS'], ['expo', 'Expo / React Native'], ['react-native', 'React Native'],
     ['react', 'React'], ['vue', 'Vue'], ['svelte', 'Svelte'], ['@angular/core', 'Angular'], ['express', 'Express'],
     ['fastify', 'Fastify'], ['prisma', 'Prisma'], ['vite', 'Vite'],
   ].filter(([d]) => d in deps).map(([, n]) => n);
-  if (has('pyproject.toml') || has('requirements.txt')) stackNames.push('Python');
+  if (python) stackNames.push('Python', ...python.frameworks);
   if (has('go.mod')) stackNames.push('Go');
   if (has('Cargo.toml')) stackNames.push('Rust');
   const ts = has('tsconfig.json');
   const envFiles = existsSync(repo) ? readdirSync(repo).filter((f) => /^\.env/.test(f) && !/example|sample|template/.test(f)) : [];
-  return { pkg, scripts, deps, pm, stackNames, ts, envFiles, name: pkg.name?.replace(/^@[^/]+\//, '') || basename(repo) };
+  return { pkg, scripts, deps, pm, python, stackNames, ts, envFiles, name: pkg.name?.replace(/^@[^/]+\//, '') || basename(repo) };
 }
 
 function runScript(pm, script) {
@@ -68,6 +98,7 @@ function detectCommand(det, id) {
   const script = { typecheck: pick('typecheck', 'type-check', 'tsc'), lint: pick('lint'), 'format-check': pick('format:check', 'format-check', 'fmt:check'), test: pick('test'), build: pick('build') }[id];
   if (script) return runScript(det.pm, script);
   if (id === 'typecheck' && det.ts) return { npm: 'npx tsc --noEmit', pnpm: 'pnpm exec tsc --noEmit', yarn: 'yarn tsc --noEmit', bun: 'bunx tsc --noEmit' }[det.pm];
+  if (det.python?.commands[id]) return det.python.commands[id];
   return '';
 }
 
@@ -80,7 +111,7 @@ function defaultPrefix(name) {
 
 function defaultUnverified(det) {
   if (det.stackNames.some((n) => /React Native|Expo/.test(n))) return 'emulator and device runs, store builds, calls to real external services, deployed environments';
-  if (det.stackNames.some((n) => /Next|React|Vue|Svelte|Angular|Vite/.test(n))) return 'browser checks at desktop and phone width, calls to real external services, deployed environments';
+  if (det.stackNames.some((n) => /Next|React|Vue|Svelte|Angular|Vite|Django|FastAPI|Flask/.test(n))) return 'browser checks at desktop and phone width, calls to real external services, deployed environments';
   return 'calls to real external services, migrations on a real database, deployed environments';
 }
 

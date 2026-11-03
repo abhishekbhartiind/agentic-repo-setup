@@ -61,6 +61,23 @@ test('existing repo: keeps its docs and hooks, detects commands, protects artifa
   assert.match(read(repo, '.gitignore'), /^\.claude\/settings\.local\.json$/m);
 });
 
+test('python repo: detects stack and commands without a package.json', () => {
+  const repo = temp();
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  writeFileSync(join(repo, 'pyproject.toml'), '[project]\nname = "order-api"\ndependencies = ["fastapi"]\n\n[tool.ruff]\nline-length = 100\n\n[tool.mypy]\nstrict = true\n\n[build-system]\nrequires = ["hatchling"]\n');
+  writeFileSync(join(repo, 'requirements.txt'), 'pytest==8.0.0\n');
+  writeFileSync(join(repo, 'uv.lock'), '');
+  execFileSync('git', ['add', '-A'], { cwd: repo });
+  execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init'], { cwd: repo });
+
+  const r = install(repo);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const cfg = json(repo, '.ai/project.json');
+  assert.equal(cfg.identity.package_manager, 'uv');
+  assert.deepEqual(cfg.commands.map((c) => c.run), ['uv run mypy .', 'uv run ruff check .', 'uv run ruff format --check .', 'uv run pytest', 'uv build']);
+  assert.match(cfg.identity.platform, /Python, FastAPI/);
+});
+
 test('answers file sets the answers', () => {
   const repo = temp();
   const answers = join(temp(), 'a.json');

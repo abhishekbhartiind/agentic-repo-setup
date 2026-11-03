@@ -63,10 +63,10 @@ The installer looks at the repo first and proposes an answer for each question. 
 | --- | --- |
 | Project name | `package.json` name, or the folder name |
 | One-line description | `package.json` description |
-| Stack | Dependencies (Next.js, NestJS, Expo, React, Vue, Svelte, Angular, Express, Fastify, Prisma, Vite) and language files |
+| Stack | Dependencies (Next.js, NestJS, Expo, React, Vue, Svelte, Angular, Express, Fastify, Prisma, Vite, Django, FastAPI, Flask) and language files |
 | Work-ID prefix | Initials of the name: `order-api` becomes `OA` |
 | PRP path | `docs/PRP.md` |
-| Commands for typecheck, lint, format-check, test, build | `package.json` scripts and the package manager (npm, pnpm, yarn or bun) |
+| Commands for typecheck, lint, format-check, test, build | `package.json` scripts and the package manager (npm, pnpm, yarn or bun); for Python repos, `ruff`/`flake8`, `mypy`/`pyright`, `pytest` and `build`/`uv build`/`poetry build`, run through `uv`, `poetry` or `pipenv` when a matching lock file is present, otherwise plain |
 | Protected files | Common secret files plus every `.env*` file found, except examples |
 | High-risk areas | Auth, payments, database migrations, env and build config, CI, dependency upgrades |
 | Things only a human can confirm | Chosen by stack, for example browser checks for web apps or device runs for mobile |
